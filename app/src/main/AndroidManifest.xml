@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    //
+    //  AndroidManifest.xml
+    //
+    //  Creative Commons Attribution 4.0 International Public License
+    //  Creative Commons may be contacted at creativecommons.org.
+    //
+    //  Copyright (c) 2024 Thomas Cavalli
+    //  Thomas Cavalli may be contacted at thomascavalli.com
+    //
+    //  List of What Changed (by Who and When):
+    //  1) Created by Thomas Cavalli on 06/01/2024.
+    //  2)
+    //  3)
+    //
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Word_Search_Puzzle_Creator"
+        tools:targetApi="31">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Word_Search_Puzzle_Creator">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
