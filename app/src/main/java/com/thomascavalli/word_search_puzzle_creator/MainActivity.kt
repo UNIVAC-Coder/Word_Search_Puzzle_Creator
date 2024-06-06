@@ -14,9 +14,9 @@
 //
 package com.thomascavalli.word_search_puzzle_creator
 
+import android.content.Context
 import android.graphics.Typeface
 import android.os.Build
-//import com.thomascavalli.word_search_puzzle_creator.ui.theme.Word_Search_Puzzle_CreatorTheme
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -60,6 +60,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.material3.Scaffold
 import com.thomascavalli.word_search_puzzle_creator.ui.theme.Word_Search_Puzzle_CreatorTheme
+import java.io.File
+import java.io.FileOutputStream
+import java.io.FileInputStream
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,7 +70,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val rowMaxSize = 25
         val columnMaxSize = 15
-        var searchWords: MutableList<String> = mutableListOf()
+        val searchWords = SearchWordReader(this).readSearchWords()
+        val searchWordSaver = SearchWordSaver(this)
         setContent {
             Word_Search_Puzzle_CreatorTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -82,7 +86,7 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        searchWords = editableWordList(searchWords = searchWords)
+                        EditableWordList(searchWordSaver = searchWordSaver, worded = searchWords)
                         DrawGrid(rowMaxSize, columnMaxSize)
                     }
                 }
@@ -143,10 +147,12 @@ fun LetterCard(letter: Char, colorScheme: androidx.compose.material3.ColorScheme
     )
 }
 @Composable
-fun editableWordList(searchWords: MutableList<String>): MutableList<String> {
-    val words: MutableList<String> = remember { searchWords }
+fun EditableWordList(searchWordSaver: SearchWordSaver, worded: MutableList<String>) {
+    val words = worded
     var newWord: String by remember { mutableStateOf("") }
-
+    var addOrConfirm: String by remember { mutableStateOf("Add") }
+    var clearOrCancel: String by remember { mutableStateOf("Clear") }
+    var count = 0
     Column(
         modifier = Modifier
             .padding(16.dp)
@@ -163,29 +169,62 @@ fun editableWordList(searchWords: MutableList<String>): MutableList<String> {
                 modifier = Modifier.weight(1f)
             )
             Spacer(modifier = Modifier.padding(8.dp))
+
             Button(onClick = {
-                if (newWord.isNotBlank()) {
-                    words.add(newWord)
-                    words.sort()
+                if (addOrConfirm == "Add") {
+                    if (newWord.isNotBlank()) {
+                        words.add(newWord)
+                        words.sort()
+                        newWord = ""
+                        searchWordSaver.saveSearchWords(words)
+                    }
+                }else{
+                    newWord = "A"
                     newWord = ""
+                    words.removeAll { true }
+                    searchWordSaver.saveSearchWords(words)
+                    count = 0
+                    addOrConfirm = "Add"
+                    clearOrCancel = "Clear"
+                }
+                }) {
+                    Text(addOrConfirm)
+            }
+            Spacer(modifier = Modifier.padding(8.dp))
+
+            Button(onClick = {
+                if (clearOrCancel == "Clear") {
+                    addOrConfirm = "Confirm"
+                    clearOrCancel = "Cancel"
+                }else{
+                    clearOrCancel = "Clear"
+                    addOrConfirm = "Add"
                 }
             }) {
-                Text("Add")
+                Text(clearOrCancel)
             }
         }
 
         // Display the list of words
         LazyColumn(modifier = Modifier.fillMaxWidth()) {
             items(words) { word ->
-                WordItem(word = word, onDelete = { words.remove(word) })
+                count++
+                WordItem(word = word, counter = count, onDelete = {
+                    words.remove(word)
+                    searchWordSaver.saveSearchWords(words)
+                    newWord = "A"
+                    newWord = ""
+                    count = 0
+                    addOrConfirm = "Add"
+                    clearOrCancel = "Clear"
+                })
             }
         }
     }
-    return words
 }
 
 @Composable
-fun WordItem(word: String, onDelete: () -> Unit) {
+fun WordItem(word: String, counter: Int, onDelete: () -> Unit) {
     Card(
         modifier = Modifier
             .padding(vertical = 4.dp)
@@ -198,6 +237,7 @@ fun WordItem(word: String, onDelete: () -> Unit) {
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Text(text = "$counter) ", modifier = Modifier.weight(0.1f))
             Text(text = word, modifier = Modifier.weight(1f))
             Button(onClick = onDelete) {
                 Text("Delete")
@@ -219,4 +259,53 @@ fun generateRandomLetters(count: Int): List<Char> {
         chars.add(('A'..'Z').random())
     }
     return chars
+}
+
+
+class SearchWordSaver(private val context: Context) {
+
+    private val fileName = "search_words.txt"
+
+    fun saveSearchWords(searchWords: List<String>) {
+        val file = File(context.filesDir, fileName)
+
+        // Create the file if it doesn't exist
+        if (!file.exists()) {
+            file.createNewFile()
+        }
+
+        // Write the search words to the file
+        FileOutputStream(file, false).use { outputStream ->
+            for (searchWord in searchWords) {
+                outputStream.write(searchWord.toByteArray())
+                outputStream.write("\n".toByteArray())
+            }
+        }
+    }
+}
+
+class SearchWordReader(private val context: Context) {
+
+    private val fileName = "search_words.txt"
+
+    fun readSearchWords(): MutableList<String> {
+        val file = File(context.filesDir, fileName)
+
+        // Check if the file exists
+        if (!file.exists()) {
+            return mutableListOf()
+        }
+
+        // Read the search words from the file
+        val searchWords = mutableListOf<String>()
+        FileInputStream(file).use { inputStream ->
+            inputStream.bufferedReader().useLines { lines ->
+                lines.forEach { line ->
+                    searchWords.add(line)
+                }
+            }
+        }
+
+        return searchWords
+    }
 }
