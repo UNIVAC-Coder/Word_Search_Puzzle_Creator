@@ -9,8 +9,9 @@
 //
 //  List of What Changed (by Who and When):
 //  1) Created by Thomas Cavalli on 06/01/2024.
-//  2)
+//  2) Added Scroll view to the main activity by Thomas Cavalli on 06/06/2024.
 //  3)
+//  4)
 //
 package com.thomascavalli.word_search_puzzle_creator
 
@@ -32,9 +33,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -83,11 +84,28 @@ class MainActivity : ComponentActivity() {
                             shape = RectangleShape
                         )
                         .fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
+                        verticalArrangement = Arrangement.Top,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        EditableWordList(searchWordSaver = searchWordSaver, worded = searchWords)
-                        DrawGrid(rowMaxSize, columnMaxSize)
+                        Column(modifier = Modifier
+                            .padding(2.dp)
+                            .fillMaxWidth()
+                            .fillMaxHeight(fraction = 0.5f),
+                            verticalArrangement = Arrangement.Top
+                            ) {
+                            EditableWordList(
+                                searchWordSaver = searchWordSaver,
+                                words = searchWords
+                            )
+                        }
+                        Column(modifier = Modifier
+                            .padding(2.dp)
+                            .fillMaxWidth()
+                            .fillMaxHeight(fraction = 1f),
+                            verticalArrangement = Arrangement.Center)
+                        {
+                            DrawGrid(rowMaxSize, columnMaxSize)
+                        }
                     }
                 }
             }
@@ -98,17 +116,14 @@ class MainActivity : ComponentActivity() {
 fun DrawGrid(rowMaxSize: Int = 5, columnMaxSize: Int = 5) {
     Box(
         modifier = Modifier
-            .size(
-                width = (25 * columnMaxSize + 10).dp,
-                height = (30 * rowMaxSize + 10).dp
-            )
             .border(
                 width = 2.dp,
                 color = isSystemADarkTheme(),
                 shape = RectangleShape
             )
-            .padding(10.dp)
+            .padding(2.dp)
     ) {
+
         RandomLetterGrid(rows = rowMaxSize, columns = columnMaxSize)
     }
 }
@@ -128,7 +143,6 @@ fun RandomLetterGrid(rows: Int = 5, columns: Int = 5) {
         columns = GridCells.Fixed(columns),
         verticalArrangement = Arrangement.spacedBy(2.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp)
-        // contentPadding = PaddingValues(6.dp, 6.dp)
     ) {
         items(letters) { letter ->
             LetterCard(letter = letter, colorScheme = colorScheme)
@@ -147,16 +161,15 @@ fun LetterCard(letter: Char, colorScheme: androidx.compose.material3.ColorScheme
     )
 }
 @Composable
-fun EditableWordList(searchWordSaver: SearchWordSaver, worded: MutableList<String>) {
-    val words = worded
+fun EditableWordList(searchWordSaver: SearchWordSaver, words: MutableList<String>) {
     var newWord: String by remember { mutableStateOf("") }
     var addOrConfirm: String by remember { mutableStateOf("Add") }
     var clearOrCancel: String by remember { mutableStateOf("Clear") }
-    var count = 0
     Column(
         modifier = Modifier
-            .padding(16.dp)
+            .padding(2.dp)
             .fillMaxWidth()
+            .fillMaxHeight(fraction = 1f),
     ) {
         // Input field for adding new words
         Row(
@@ -183,7 +196,6 @@ fun EditableWordList(searchWordSaver: SearchWordSaver, worded: MutableList<Strin
                     newWord = ""
                     words.removeAll { true }
                     searchWordSaver.saveSearchWords(words)
-                    count = 0
                     addOrConfirm = "Add"
                     clearOrCancel = "Clear"
                 }
@@ -208,13 +220,11 @@ fun EditableWordList(searchWordSaver: SearchWordSaver, worded: MutableList<Strin
         // Display the list of words
         LazyColumn(modifier = Modifier.fillMaxWidth()) {
             items(words) { word ->
-                count++
-                WordItem(word = word, counter = count, onDelete = {
+                WordItem(word = word, onDelete = {
                     words.remove(word)
                     searchWordSaver.saveSearchWords(words)
                     newWord = "A"
                     newWord = ""
-                    count = 0
                     addOrConfirm = "Add"
                     clearOrCancel = "Clear"
                 })
@@ -224,7 +234,7 @@ fun EditableWordList(searchWordSaver: SearchWordSaver, worded: MutableList<Strin
 }
 
 @Composable
-fun WordItem(word: String, counter: Int, onDelete: () -> Unit) {
+fun WordItem(word: String, onDelete: () -> Unit) {
     Card(
         modifier = Modifier
             .padding(vertical = 4.dp)
@@ -233,11 +243,10 @@ fun WordItem(word: String, counter: Int, onDelete: () -> Unit) {
     ) {
         Row(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(8.dp)
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "$counter) ", modifier = Modifier.weight(0.1f))
             Text(text = word, modifier = Modifier.weight(1f))
             Button(onClick = onDelete) {
                 Text("Delete")
