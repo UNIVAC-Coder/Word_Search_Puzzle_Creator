@@ -10,9 +10,11 @@
 //  List of What Changed (by Who and When):
 //  1) Created by Thomas Cavalli on 06/01/2024.
 //  2) Added Scroll view to the main activity by Thomas Cavalli on 06/06/2024.
-//  3)
-//  4)
-//
+//  3) Created first diagonal grid by Thomas Cavalli on 06/09/2024.
+//  4) Started coding growable grid by Thomas Cavalli on 06/09/2024.
+//  5)
+//  6)
+
 package com.thomascavalli.word_search_puzzle_creator
 
 import android.content.Context
@@ -24,16 +26,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -46,32 +45,35 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.material3.Scaffold
 import com.thomascavalli.word_search_puzzle_creator.ui.theme.Word_Search_Puzzle_CreatorTheme
 import java.io.File
-import java.io.FileOutputStream
 import java.io.FileInputStream
+import java.io.FileOutputStream
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val rowMaxSize = 25
-        val columnMaxSize = 15
-        val searchWords = SearchWordReader(this).readSearchWords()
+        //val rowMaxSize = 25
+        //val columnMaxSize = 15
+        val readWords = SearchWordReader(this).readSearchWords()
         val searchWordSaver = SearchWordSaver(this)
         setContent {
             Word_Search_Puzzle_CreatorTheme {
@@ -87,25 +89,10 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.Top,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Column(modifier = Modifier
-                            .padding(2.dp)
-                            .fillMaxWidth()
-                            .fillMaxHeight(fraction = 0.5f),
-                            verticalArrangement = Arrangement.Top
-                            ) {
-                            EditableWordList(
-                                searchWordSaver = searchWordSaver,
-                                words = searchWords
-                            )
-                        }
-                        Column(modifier = Modifier
-                            .padding(2.dp)
-                            .fillMaxWidth()
-                            .fillMaxHeight(fraction = 1f),
-                            verticalArrangement = Arrangement.Center)
-                        {
-                            DrawGrid(rowMaxSize, columnMaxSize)
-                        }
+                        EditableWordList(
+                            searchWordSaver = searchWordSaver,
+                            words = readWords
+                        )
                     }
                 }
             }
@@ -113,7 +100,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 @Composable
-fun DrawGrid(rowMaxSize: Int = 5, columnMaxSize: Int = 5) {
+fun DrawGrid(words: MutableList<String>) {
     Box(
         modifier = Modifier
             .border(
@@ -123,8 +110,54 @@ fun DrawGrid(rowMaxSize: Int = 5, columnMaxSize: Int = 5) {
             )
             .padding(2.dp)
     ) {
+        if (words.isEmpty()) {
+            RandomLetterGrid(rows = 25, columns = 15)
+        }else{
+            val sortedWords = words.sortedBy { it.length }
+            val lengthOfLongestWord = sortedWords.last().length
+            var numberOfWords = 0
+            for (searchWord in sortedWords) {
+                if (searchWord.length == lengthOfLongestWord) {
+                    numberOfWords++
+                }
+            }
+            val biggestWords = sortedWords.takeLast(numberOfWords)
+            val luckyWord = biggestWords.random()
+            val rowMaxSize = luckyWord.length
+            val columnMaxSize = luckyWord.length
+            val count = rowMaxSize * columnMaxSize
+            val letters = mutableListOf<Char>()
+            repeat(count) {
+                letters.add('*')
+            }
+            val dynamicColor = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+            val darkTheme = isSystemInDarkTheme()
+            val colorScheme = when {
+                dynamicColor && darkTheme -> dynamicDarkColorScheme(LocalContext.current)
+                dynamicColor && !darkTheme -> dynamicLightColorScheme(LocalContext.current)
+                darkTheme -> MaterialTheme.colorScheme
+                else -> MaterialTheme.colorScheme
+            }
+            var rowCounter = rowMaxSize - 1
+            var columnCounter = columnMaxSize - 1
+            for (letter in luckyWord) {
+                letters[rowCounter * columnMaxSize + columnCounter] = letter
+                rowCounter--
+                columnCounter--
+            }
 
-        RandomLetterGrid(rows = rowMaxSize, columns = columnMaxSize)
+
+            // Display the grid of letters
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(columnMaxSize),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(letters) { letter ->
+                    LetterCard(letter = letter, colorScheme = colorScheme)
+                }
+            }
+        }
     }
 }
 @Composable
@@ -169,7 +202,7 @@ fun EditableWordList(searchWordSaver: SearchWordSaver, words: MutableList<String
         modifier = Modifier
             .padding(2.dp)
             .fillMaxWidth()
-            .fillMaxHeight(fraction = 1f),
+            .fillMaxHeight(fraction = 0.5f),
     ) {
         // Input field for adding new words
         Row(
@@ -199,7 +232,7 @@ fun EditableWordList(searchWordSaver: SearchWordSaver, words: MutableList<String
                     addOrConfirm = "Add"
                     clearOrCancel = "Clear"
                 }
-                }) {
+            }) {
                     Text(addOrConfirm)
             }
             Spacer(modifier = Modifier.padding(8.dp))
@@ -231,6 +264,16 @@ fun EditableWordList(searchWordSaver: SearchWordSaver, words: MutableList<String
             }
         }
     }
+    Column(modifier = Modifier
+        .padding(2.dp)
+        .fillMaxWidth()
+        .fillMaxHeight(fraction = 1f),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally)
+    {
+        DrawGrid(words = words)
+
+    }
 }
 
 @Composable
@@ -257,12 +300,12 @@ fun WordItem(word: String, onDelete: () -> Unit) {
 @Composable
 fun isSystemADarkTheme(): Color {
     return if (isSystemInDarkTheme())
-        Color.White
+        Color.White //of border
     else
         Color.DarkGray
 }
 
-fun generateRandomLetters(count: Int): List<Char> {
+private fun generateRandomLetters(count: Int): List<Char> {
     val chars = mutableListOf<Char>()
     repeat(count) {
         chars.add(('A'..'Z').random())
@@ -272,18 +315,12 @@ fun generateRandomLetters(count: Int): List<Char> {
 
 
 class SearchWordSaver(private val context: Context) {
-
     private val fileName = "search_words.txt"
-
     fun saveSearchWords(searchWords: List<String>) {
         val file = File(context.filesDir, fileName)
-
-        // Create the file if it doesn't exist
         if (!file.exists()) {
             file.createNewFile()
         }
-
-        // Write the search words to the file
         FileOutputStream(file, false).use { outputStream ->
             for (searchWord in searchWords) {
                 outputStream.write(searchWord.toByteArray())
@@ -294,18 +331,12 @@ class SearchWordSaver(private val context: Context) {
 }
 
 class SearchWordReader(private val context: Context) {
-
     private val fileName = "search_words.txt"
-
     fun readSearchWords(): MutableList<String> {
         val file = File(context.filesDir, fileName)
-
-        // Check if the file exists
         if (!file.exists()) {
             return mutableListOf()
         }
-
-        // Read the search words from the file
         val searchWords = mutableListOf<String>()
         FileInputStream(file).use { inputStream ->
             inputStream.bufferedReader().useLines { lines ->
@@ -314,7 +345,6 @@ class SearchWordReader(private val context: Context) {
                 }
             }
         }
-
         return searchWords
     }
 }
