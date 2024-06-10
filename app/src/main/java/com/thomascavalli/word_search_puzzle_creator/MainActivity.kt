@@ -67,12 +67,18 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 
+object Constants {
+    const val creator = "CC_BY_4.0, Created by Thomas Cavalli on 06/01/2024."
+}
+object Global {
+    var letters = mutableListOf<Char>()
+    var rowMaxSize: Int = 25
+    var columnMaxSize: Int = 15
+}
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        //val rowMaxSize = 25
-        //val columnMaxSize = 15
         val readWords = SearchWordReader(this).readSearchWords()
         val searchWordSaver = SearchWordSaver(this)
         setContent {
@@ -89,6 +95,7 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.Top,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        Text("Word Search Puzzle Creator")
                         EditableWordList(
                             searchWordSaver = searchWordSaver,
                             words = readWords
@@ -100,7 +107,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 @Composable
-fun DrawGrid(words: MutableList<String>) {
+fun DrawGrid(words: MutableList<String>, newGrid: Boolean = false) {
     Box(
         modifier = Modifier
             .border(
@@ -113,23 +120,33 @@ fun DrawGrid(words: MutableList<String>) {
         if (words.isEmpty()) {
             RandomLetterGrid(rows = 25, columns = 15)
         }else{
-            val sortedWords = words.sortedBy { it.length }
-            val lengthOfLongestWord = sortedWords.last().length
-            var numberOfWords = 0
-            for (searchWord in sortedWords) {
-                if (searchWord.length == lengthOfLongestWord) {
-                    numberOfWords++
+            if (newGrid) {
+                val sortedWords = words.sortedBy { it.length }
+                val lengthOfLongestWord = sortedWords.last().length
+                var numberOfWords = 0
+                for (searchWord in sortedWords) {
+                    if (searchWord.length == lengthOfLongestWord) {
+                        numberOfWords++
+                    }
+                }
+                val biggestWords = sortedWords.takeLast(numberOfWords)
+                val luckyWord = biggestWords.random()
+                Global.rowMaxSize = luckyWord.length
+                Global.columnMaxSize = luckyWord.length
+                Global.letters.removeAll { true }
+                val count = Global.rowMaxSize * Global.columnMaxSize
+                repeat(count) {
+                    Global.letters.add('*')
+                }
+                var rowCounter = Global.rowMaxSize - 1
+                var columnCounter = Global.columnMaxSize - 1
+                for (letter in luckyWord) {
+                    Global.letters[rowCounter * Global.columnMaxSize + columnCounter] = letter
+                    rowCounter--
+                    columnCounter--
                 }
             }
-            val biggestWords = sortedWords.takeLast(numberOfWords)
-            val luckyWord = biggestWords.random()
-            val rowMaxSize = luckyWord.length
-            val columnMaxSize = luckyWord.length
-            val count = rowMaxSize * columnMaxSize
-            val letters = mutableListOf<Char>()
-            repeat(count) {
-                letters.add('*')
-            }
+
             val dynamicColor = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
             val darkTheme = isSystemInDarkTheme()
             val colorScheme = when {
@@ -138,22 +155,13 @@ fun DrawGrid(words: MutableList<String>) {
                 darkTheme -> MaterialTheme.colorScheme
                 else -> MaterialTheme.colorScheme
             }
-            var rowCounter = rowMaxSize - 1
-            var columnCounter = columnMaxSize - 1
-            for (letter in luckyWord) {
-                letters[rowCounter * columnMaxSize + columnCounter] = letter
-                rowCounter--
-                columnCounter--
-            }
-
-
             // Display the grid of letters
             LazyVerticalGrid(
-                columns = GridCells.Fixed(columnMaxSize),
+                columns = GridCells.Fixed(Global.columnMaxSize),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                items(letters) { letter ->
+                items(Global.letters) { letter ->
                     LetterCard(letter = letter, colorScheme = colorScheme)
                 }
             }
@@ -198,12 +206,54 @@ fun EditableWordList(searchWordSaver: SearchWordSaver, words: MutableList<String
     var newWord: String by remember { mutableStateOf("") }
     var addOrConfirm: String by remember { mutableStateOf("Add") }
     var clearOrCancel: String by remember { mutableStateOf("Clear") }
+    var newGrid: Boolean by remember { mutableStateOf(true) }
     Column(
         modifier = Modifier
             .padding(2.dp)
             .fillMaxWidth()
             .fillMaxHeight(fraction = 0.5f),
     ) {
+
+        Row(modifier = Modifier
+            .padding(2.dp)
+            .fillMaxWidth()
+            .fillMaxHeight(fraction = 0.1f),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Button(onClick = {
+                growTop()
+                newWord = "A"
+                newWord = ""
+                newGrid = false
+            }) {
+                Text("Grow Top")
+            }
+            Button(onClick = {
+                growBottom()
+                newWord = "A"
+                newWord = ""
+                newGrid = false
+            }) {
+                Text("Bottom")
+            }
+            Button(onClick = {
+                growLeft()
+                newWord = "A"
+                newWord = ""
+                newGrid = false
+            }) {
+                Text("Left")
+            }
+            Button(onClick = {
+                growRight()
+                newWord = "A"
+                newWord = ""
+                newGrid = false
+            }) {
+                Text("Right")
+            }
+        }
         // Input field for adding new words
         Row(
             verticalAlignment = Alignment.CenterVertically
@@ -223,6 +273,7 @@ fun EditableWordList(searchWordSaver: SearchWordSaver, words: MutableList<String
                         words.sort()
                         newWord = ""
                         searchWordSaver.saveSearchWords(words)
+                        newGrid = true
                     }
                 }else{
                     newWord = "A"
@@ -231,6 +282,7 @@ fun EditableWordList(searchWordSaver: SearchWordSaver, words: MutableList<String
                     searchWordSaver.saveSearchWords(words)
                     addOrConfirm = "Add"
                     clearOrCancel = "Clear"
+                    newGrid = true
                 }
             }) {
                     Text(addOrConfirm)
@@ -271,8 +323,7 @@ fun EditableWordList(searchWordSaver: SearchWordSaver, words: MutableList<String
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally)
     {
-        DrawGrid(words = words)
-
+        DrawGrid(words = words, newGrid = newGrid)
     }
 }
 
@@ -313,7 +364,31 @@ private fun generateRandomLetters(count: Int): List<Char> {
     return chars
 }
 
-
+private fun growTop() {
+    repeat(Global.columnMaxSize) {
+        Global.letters.add(0, '*')
+    }
+    Global.rowMaxSize++
+}
+private fun growBottom() {
+    repeat(Global.columnMaxSize) {
+        Global.letters.add('*')
+    }
+    Global.rowMaxSize++
+}
+private fun growLeft() {
+    for (row in 0 until Global.rowMaxSize) {
+        Global.letters.add((Global.columnMaxSize * row + row), '*')
+    }
+    Global.columnMaxSize++
+}
+private fun growRight() {
+    for (row in 1 until Global.rowMaxSize) {
+        Global.letters.add((Global.columnMaxSize * row + (row - 1)), '*')
+    }
+    Global.letters.add('*')
+    Global.columnMaxSize++
+}
 class SearchWordSaver(private val context: Context) {
     private val fileName = "search_words.txt"
     fun saveSearchWords(searchWords: List<String>) {

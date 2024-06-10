@@ -59,12 +59,13 @@ Intentions of this License.
 
 The licensor, Thomas Cavalli, intends that the MainActivity.kt file be
 covered by this License, CC_BY_4.0.  I request that any changes to the
-MainActivity.kt file be noted by who and date.  This insure that the
-creator, Thomas Cavalli, will be given credit for my creation.
+MainActivity.kt file be noted by who and date.  This insures that the
+creator, Thomas Cavalli, will be given credit for my creation and you
+be given credit for your improvements.
 All other files produced by Android Studio are not covered by this
 license as they are generated automatically and in the background and
 become third party files, necessary to compile this App, and covered by
-its own licence.
+its Android Studio licence.
 
 =======================================================================
 
